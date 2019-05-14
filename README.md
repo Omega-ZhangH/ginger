@@ -342,6 +342,7 @@ app.libs.error_code
 
 ```python
 # 注意此处要用werkzeug的库，而不是http.client
+
 from werkzeug.exceptions import HTTPException
 
 
