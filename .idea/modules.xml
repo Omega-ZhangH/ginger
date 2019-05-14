@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/.idea/RESTful_API.iml" filepath="$PROJECT_DIR$/.idea/RESTful_API.iml" />
+      <module fileurl="file://$PROJECT_DIR$/../../python flask高级编程/fisher/.idea/fisher.iml" filepath="$PROJECT_DIR$/../../python flask高级编程/fisher/.idea/fisher.iml" />
+      <module fileurl="file://$PROJECT_DIR$/../../../pycharm/gxb/.idea/gxb.iml" filepath="$PROJECT_DIR$/../../../pycharm/gxb/.idea/gxb.iml" />
+      <module fileurl="file://$PROJECT_DIR$/../../python flask高级编程/mstx_open_api/.idea/mstx_open_api.iml" filepath="$PROJECT_DIR$/../../python flask高级编程/mstx_open_api/.idea/mstx_open_api.iml" />
+    </modules>
+  </component>
+</project>
