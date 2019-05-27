@@ -12,11 +12,15 @@ Template:
 """
 import json
 
-from wtforms import Form, StringField, IntegerField
+# from wtforms import Form, StringField, IntegerField
+from wtforms import StringField, IntegerField
 from wtforms.validators import DataRequired, length, ValidationError, Email, Regexp
 
 from app.libs.enums import ClientTypeEnum
 from app.models.user import User
+
+# 继承自定义的Form 替换WTForm
+from app.validators.base import BaseForm as Form
 
 
 class ClientForm(Form):
@@ -26,7 +30,7 @@ class ClientForm(Form):
     # account : 账号
     # DataRequired()：必传
     # length(min=5, max=32)：参数长度最小为5位，最大为32
-    account = StringField(validators=[DataRequired(), length(min=5, max=32)])
+    account = StringField(validators=[DataRequired(message='不允许为空'), length(min=5, max=32)])
     # 密码 ：可为空
     secret = StringField()
     # 账号类型

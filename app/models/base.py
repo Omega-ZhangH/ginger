@@ -29,6 +29,7 @@ class SQLAlchemy(_SQLAlchemy):
         except Exception as e:
             db.session.rollback()
             raise e
+            # return '插入失败'
 
 
 # 重写基类来实现自身的业务逻辑 自定义filter_by，添加默认属性

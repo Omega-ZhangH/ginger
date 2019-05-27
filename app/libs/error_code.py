@@ -13,6 +13,23 @@ Template:
 # 注意此处要用werkzeug的库，而不是http.client
 from werkzeug.exceptions import HTTPException
 
+from app.libs.error import APIException
+
+
+class Success(APIException):
+    # 定义一个操作成功的反馈信息
+    code = 201
+    msg = 'OK'
+    error_code = 0
+
+
+class ServerError(APIException):
+    # 专门定义一个异常的返回，作用等同于APIException
+    # 但是名称规范，增加维护的可读性
+    code = 500
+    msg = 'sorry, we make a mistake ^_^！'
+    error_code = 999
+
 
 class ClientTypeError(HTTPException):
     # 400:请求参数错误
@@ -29,3 +46,9 @@ class ClientTypeError(HTTPException):
     description = {
         'client is invalid'
     }
+
+
+class ParameterException(APIException):
+    code = 400
+    msg = 'invalid parameter'
+    error_code = 1000

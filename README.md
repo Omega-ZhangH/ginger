@@ -362,3 +362,125 @@ class ClientTypeError(HTTPException):
     }
 ```
 
+#### 4-8 浅谈异常返回的标准与重要性
+
+> 2019-05-15 17:08:19
+
+返回的信息种类：
+
+1. 业务数据
+2. 操作成功提示信息
+3. 错误异常信息
+   1. HTML格式
+   2. JSON格式
+
+#### 4-9 自定义APIException
+
+> 2019-05-15 16:44:54
+
+/ginger/app/libs/error.py
+
+通过重写HTTPException的get_body和get_headers
+
+返回自定义的JSON格式数据
+
+#### 5-1 重写WTForms 一
+
+> 2019-05-16 17:14:35
+
+相当于二次开发flask，使得代码更加精简，功能更强
+
+####5-2 重写WTForms 二
+
+2019-05-27 11:44:23
+
+接收抛送过来的JSON数据
+
+校验数据的合法性，通过继承WTForms，然后新增一个校验并抛出异常的方法
+
+抛出的异常方法通过继承自定义的APIException来实现
+
+最早继承的还是from werkzeug.exceptions import HTTPException
+
+```sql
+    def validate_for_api(self):
+        valid = super(BaseForm, self).validate()
+        if not valid:
+            # 调用form的validate的时候，所有的错误信息会存到errors这个属性里
+            # 把报错的errors传入自定义的参数异常方法里
+            # 通过此方法，把WTForms不抛出异常的特性，实现抛出异常
+            print(self.errors)
+            raise ParameterException(msg=self.errors)
+```
+
+#### 5-3 可以接受定义的复杂，但不能接受调用的复杂
+
+> 2019-05-27 14:11:00
+
+精简视图函数中每次实例化Form时，都要传入json
+
+```
+    data = request.json
+    # 如果客户端传送的是json数据，传入数据到验证器则需要用【关键字参数】
+    form = ClientForm(data=data)
+```
+
+```
+# request.json的数据隐藏在了ClientForm的基类中直接调用，简化调用
+    form = ClientForm()
+```
+
+两行精简成一行：
+
+```
+    form = ClientForm()
+    form.validate_for_api()
+```
+
+```
+    # 但是validate_for_api()需要返回form
+form = ClientForm().validate_for_api()
+
+```
+
+- 定义的代码不管多复杂，都只是一次性的
+- 调用是经常会用到的，所以越简单越好
+
+#### 5-4 已知异常与未知异常
+
+对异常信息进行处理
+
+常见的异常类型：
+
+- 已知异常：可以预知的异常
+- 未知异常：未能料想到的异常
+
+#### 5-5 全局异常处理
+
+> 2019-05-27 16:46:36
+
+通过全局异常处理，规范异常返回信息
+
+```python
+# 全局异常处理
+@app.errorhandler(Exception)
+def framework_error(e):
+    # flask 1.0 可以捕捉通用的异常
+    # 判断属于哪种异常
+    if isinstance(e, APIException):
+        return e
+    if isinstance(e, HTTPException):
+        code = e.code
+        msg = e.description
+        error_code = 1007
+        return APIException(code=code, msg=msg, error_code=error_code)
+    else:
+        # return APIException()
+        # 作用等同于APIException，可读性更强
+        # 还要注意的一点，如果是在调试模式下，是需要把完整的报错返回出来
+        if not app.config['DEBUG']:
+            return ServerError()
+        else:
+            raise e
+```
+

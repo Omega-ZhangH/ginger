@@ -15,7 +15,8 @@ Template:
 from flask import request
 
 from app.libs.enums import ClientTypeEnum
-from app.libs.error_code import ClientTypeError
+from app.libs.error import APIException
+from app.libs.error_code import ClientTypeError, Success
 from app.libs.redprint import Redprint
 from app.models.user import User
 from app.validators.forms import UserEmailForm, ClientForm
@@ -25,25 +26,27 @@ api = Redprint('client')
 
 @api.route('/register', methods=['POST'])
 def create_client():
-    data = request.json
-    # 如果客户端传送的是json数据，传入数据到验证器则需要用【关键字参数】
-    form = ClientForm(data=data)
+    1/0
+    # request.json的数据隐藏在了ClientForm的基类中直接调用，简化调用
+    form = ClientForm()
+    form.validate_for_api()
+    promise = {
+        ClientTypeEnum.USER_EMAIL: __reister_user_by_email,
+    }
+# 调用__reister_user_by_email方法，通过枚举类型拿到
+    promise[form.type.data]()
 
-    if form.validate():
-        promise = {
-            ClientTypeEnum.USER_EMAIL: __reister_user_by_email,
-        }
-    # 调用__reister_user_by_email方法，通过枚举类型拿到
-        promise[form.type.data]()
-    else:
-        raise ClientTypeError()
-    return 'success'
+    # return一个类本质是返回的一个HTTPException 实际上是一个html返回
+    return Success()
 
 
 # 邮箱客户端验证
 def __reister_user_by_email():
-    form = UserEmailForm(data=request.json)
-    if form.validate():
-        User.register_by_email(form.nickname.data,
-                               form.account.data,
-                               form.secret.data)
+    form = UserEmailForm().validate_for_api()
+    # if form.validate():
+    # 通过新编些的方法来验证
+    # 注册用户信息写入到数据库
+    User.register_by_email(form.nickname.data,
+                           form.account.data,
+                           form.secret.data)
+
