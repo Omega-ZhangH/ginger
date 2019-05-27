@@ -121,7 +121,7 @@ Email   : zhanghao12z@163.com
             url_prefix = '/' + self.name
 ```
 
-#### 3-1 REST的最基本特征（可选观看）
+#### 3-1 REST的最基本特征
 
 - REST : 表述性状态转移
   - **强制要求要返回JSON格式**
@@ -138,7 +138,7 @@ Email   : zhanghao12z@163.com
     - PUT
     - DELETE
 
-####3-2 为什么标准REST不适合内部开发（可选观看）
+####3-2 为什么标准REST不适合内部开发
 
 - REST并不是适合所有场景
   - 不适合的场景和缺点
@@ -483,4 +483,6 @@ def framework_error(e):
         else:
             raise e
 ```
+
+#### 6-1 Token概述
 
