@@ -11,8 +11,9 @@ Template:
 ===========================================
 """
 from sqlalchemy import Column, String, SmallInteger, Integer
-from werkzeug.security import generate_password_hash
+from werkzeug.security import generate_password_hash, check_password_hash
 
+from app.libs.error_code import NotFound, AuthFailed
 from app.models.base import Base, db
 
 
@@ -41,3 +42,21 @@ class User(Base):
             user.email = account
             user.password = secret
             db.session.add(user)
+
+    @staticmethod
+    def verify(email, password):
+        # 验证用户信息，先查找用户信息
+        user = User.query.filter_by(email=email).first()
+        if not user:
+            # 如果没找到用户信息，返回一个自定义的异常
+            raise NotFound(msg='用户未找到')
+        if not user.check_password(password):
+            # 如果密码没有找到，在返回一个异常
+            raise AuthFailed()
+        return {'uid': user.id}
+
+    def check_password(self, raw):
+        # 定义一个校验用户密码的方法
+        if not self._password:
+            return False
+        return check_password_hash(self._password, raw)

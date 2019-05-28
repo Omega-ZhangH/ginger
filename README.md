@@ -138,7 +138,7 @@ Email   : zhanghao12z@163.com
     - PUT
     - DELETE
 
-####3-2 为什么标准REST不适合内部开发
+#### 3-2 为什么标准REST不适合内部开发
 
 - REST并不是适合所有场景
   - 不适合的场景和缺点
@@ -304,7 +304,7 @@ class ClientForm(Form):
 
     
 
-####4-6生成用户数据
+#### 4-6生成用户数据
 
 > 2019-04-04 16:41:40
 
@@ -485,4 +485,165 @@ def framework_error(e):
 ```
 
 #### 6-1 Token概述
+
+> 2019-05-27 16:57:34
+
+Token：令牌。
+
+作用类似于浏览器在发送了用户名、密码给后端校验后，把票据写入到cookie.
+
+- 有效期
+- 可标识用户身份
+- 令牌本身是加密的
+
+#### 6-2 获取Token令牌
+
+> 2019-05-28 11:21:25
+
+在api的实现过程中获取令牌，既相当于在浏览器上设置cookie
+
+- 需要实现用户的账号和密码校验
+- 校验成功后需要有一个生成Token的方法
+- 生成成功返回一个加密后的Token和Http状态码
+
+```python
+
+@api.route('', methods=['POST'])
+# 之所以用POST方法是为了隐藏用户名密码，可以放在BODY中传.传参更安全
+def get_token():
+    """
+    :return: 返回加密后的Token和一个HTTP状态码
+    """
+    # api的get_token就相当于web的login
+    # 接收用户的参数
+    form = ClientForm().validate_for_api()
+
+    promise = {
+        ClientTypeEnum.USER_EMAIL: User.verify
+    }
+
+    identity = promise[ClientTypeEnum(form.type.data)](
+        form.account.data,
+        form.secret.data
+    )
+
+    # 生成Token
+    token = generate_auth_token(identity['uid'],
+                                form.type.data,
+                                expiration=current_app.config['TOKEN_EXPIRATION'])
+    # 将Token字节码转换为ascii码
+    t = {
+        'token': token.decode('ascii')
+    }
+
+    return jsonify(t), 201
+
+
+def generate_auth_token(uid, ac_type, scope=None, expiration=7200):
+    """
+    生成Token
+    :param uid: 用户ID
+    :param ac_type: 账户类型
+    :param scope: 权限作用域
+    :param expiration: 有效时间
+    :return: 返回加密后的Token
+    """
+    s = Serializer(current_app.config['SECRET_KEY'],
+                   expiration=expiration)
+    return s.dumps({
+        'uid': uid,
+        'type': ac_type.value
+    })
+```
+
+#### 6-3 Token的用处
+
+- 用来标识用户的身份
+- 需要校验Token的合法性和有效性
+- 避免了用户访问不同页面频繁的输入账号和密码
+
+#### 6-4 @auth拦截器执行流程
+
+通过HTTPBasicAuth，来实现权限的校验和控制。
+
+自定义一个校验装饰器，来进行保护
+
+```python
+
+from flask_httpauth import HTTPBasicAuth
+
+auth = HTTPBasicAuth()
+
+
+@auth.verify_password
+def verify_password(account, paaword):
+    pass
+
+```
+
+#### 6-5 HTTPBasicAuth基本原理
+
+HTTPBasicAuth本身支持在header里面发送账号和密码
+
+以键值对的形式展现：
+
+key='Authorization'
+
+账号密码是以basic+空格+base64加密后的字符串为消息传递
+
+value=basic base64(账号:密码)
+
+#### 6-6 以BasicAuth的方式发送Token
+
+通过postman的Authorization选择basic Auth 在用户名里填写token的值
+
+这样就避免了要转换成base64才能发送的问题
+
+#### 6-7 验证Token
+
+通过调用现有的库，实现token的序列化、和有效性和时效性的验证
+
+同时用到小技巧namedtuple，返回一个对象
+
+```python3
+from collections import namedtuple
+
+from flask import current_app, g
+from flask_httpauth import HTTPBasicAuth
+from itsdangerous import TimedJSONWebSignatureSerializer as Serializer, BadSignature, SignatureExpired
+
+from app.libs.error_code import AuthFailed
+
+auth = HTTPBasicAuth()
+User = namedtuple('User', ['uid', 'ac_type', 'scope'])
+
+
+@auth.verify_password
+def verify_password(token, paaword):
+    user_info = verify_auth_token(token)
+    # 如果认证失败的话
+    if not user_info:
+        return False
+    else:
+        g.user = user_info
+        return True
+
+
+def verify_auth_token(token):
+    # 验证token是否合法
+    s = Serializer(current_app.config['SECRET_KEY'])
+    try:
+        # 载入token
+        data = s.loads(token)
+    except BadSignature:
+        raise AuthFailed(msg='token is invalid',
+                         error_code=1002)
+    except SignatureExpired:
+        raise AuthFailed(msg='token was expired',
+                         error_code=1003)
+    uid = data['uid']
+    ac_type = data['type']
+    # 返回结果以对象式的形式返回
+    return User(uid, ac_type, '')
+```
 

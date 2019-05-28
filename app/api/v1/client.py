@@ -26,7 +26,6 @@ api = Redprint('client')
 
 @api.route('/register', methods=['POST'])
 def create_client():
-    1/0
     # request.json的数据隐藏在了ClientForm的基类中直接调用，简化调用
     form = ClientForm()
     form.validate_for_api()
