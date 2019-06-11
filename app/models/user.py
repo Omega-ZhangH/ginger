@@ -10,6 +10,8 @@ Function:
 Template:
 ===========================================
 """
+import datetime
+
 from sqlalchemy import Column, String, SmallInteger, Integer
 from werkzeug.security import generate_password_hash, check_password_hash
 
@@ -25,6 +27,13 @@ class User(Base):
     auth = Column(SmallInteger, default=1)
     #
     _password = Column('password', String(100))
+
+    # 定义keys，__getattr__ 进行模型序列化时的属性控制
+    def keys(self):
+        return ['id', 'email', 'nickname', 'auth']
+
+
+
 
     @property
     def password(self):
@@ -46,10 +55,15 @@ class User(Base):
     @staticmethod
     def verify(email, password):
         # 验证用户信息，先查找用户信息
+        """
         user = User.query.filter_by(email=email).first()
         if not user:
             # 如果没找到用户信息，返回一个自定义的异常
             raise NotFound(msg='用户未找到')
+        """
+        # 重写first_or_404后，有效精简代码。等价于上面的加if判断
+        user = User.query.filter_by(email=email).first_or_404()
+
         if not user.check_password(password):
             # 如果密码没有找到，在返回一个异常
             raise AuthFailed()
@@ -60,3 +74,7 @@ class User(Base):
         if not self._password:
             return False
         return check_password_hash(self._password, raw)
+
+    def delete(self):
+        # 软删除
+        self.status = 0

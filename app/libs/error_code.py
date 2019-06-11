@@ -23,6 +23,15 @@ class Success(APIException):
     error_code = 0
 
 
+class DeleteSuccess(Success):
+    # 定义一个删除操作成功的反馈信息
+    # 如果定义成204则前端不会返回内容，因为html协议中定义的204状态就是无信息
+    # 为了保持API的返回一致性，定义成别的code
+    # code = 204
+    code = 202
+    error_code = 1
+
+
 class ServerError(APIException):
     # 专门定义一个异常的返回，作用等同于APIException
     # 但是名称规范，增加维护的可读性

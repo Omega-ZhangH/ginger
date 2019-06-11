@@ -46,7 +46,8 @@ def get_token():
                                 expiration=current_app.config['TOKEN_EXPIRATION'])
     # 将Token字节码转换为ascii码
     t = {
-        'token': token.decode('ascii')
+        'token': token.decode('ascii'),
+        'uid': identity['uid']
     }
 
     return jsonify(t), 201

@@ -16,6 +16,8 @@ from sqlalchemy import Column, SmallInteger, Integer
 
 from contextlib import contextmanager
 
+from app.libs.error_code import NotFound
+
 
 class SQLAlchemy(_SQLAlchemy):
     """
@@ -38,6 +40,26 @@ class Query(BaseQuery):
         if 'status' not in kwargs.keys():
             kwargs['status'] = 1
         return super(Query, self).filter_by(**kwargs)
+
+    def first_or_404(self):
+        """Like :meth:`first` but aborts with 404 if not found instead of returning ``None``."""
+
+        rv = self.first()
+        if rv is None:
+            raise NotFound()
+        return rv
+
+    def get_or_404(self, ident):
+        """
+        重写BaseQuery中的方法，来实现自定义的报错返回
+        :param ident:
+        :return:
+        """
+
+        rv = self.get(ident)
+        if rv is None:
+            raise NotFound()
+        return rv
 
 
 db = SQLAlchemy(query_class=Query)
@@ -71,3 +93,9 @@ class Base(db.Model):
     @staticmethod
     def delete(self):
         self.status = 0
+
+    # 每个模型序列化都需要有keys和__getitem__。为了简化代码，可以把__getitem__放到基类中
+    def __getitem__(self, item):
+        return getattr(self, item)
+
+

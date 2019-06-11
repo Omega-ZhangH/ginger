@@ -1,24 +1,4 @@
-# -*- coding: utf-8 -*-
-# @Time    : 2019-01-23 11:59
-# @Author  : 张皓
-# @Email   : zhanghao12z@163.com
-# @File    : __init__.py.py
-# @Software: PyCharm
-
-
-
-from flask import Flask
-
-
-# # 导入蓝图
-# def register_blueprints(app):
-#     from app.api.v1.user import user
-#     from app.api.v1.book import book
-#     app.register_blueprint(user)
-#     app.register_blueprint(book)
-
-# 重构自定义红图后的蓝图
-from app.api.v1 import create_blueprint_v1
+from app.app import Flask
 
 
 def register_blueprints(app):

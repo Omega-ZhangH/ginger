@@ -23,7 +23,7 @@ User = namedtuple('User', ['uid', 'ac_type', 'scope'])
 
 
 @auth.verify_password
-def verify_password(token, paaword):
+def verify_password(token, password):
     user_info = verify_auth_token(token)
     # 如果认证失败的话
     if not user_info:

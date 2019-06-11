@@ -647,3 +647,254 @@ def verify_auth_token(token):
     return User(uid, ac_type, '')
 ```
 
+#### 6-8 重写first_or_404与get_or_404
+
+> 2019-05-29 09:51:29
+
+获取用户信息的视图函数中要返回查询的用户信息。如果用户信息没找到，又要单独写一个raise
+
+
+
+可以通过重写first_or_404和get_or_404来解决这个问题
+
+```python
+def get_or_404(self, ident):
+    """
+    重写BaseQuery中的方法，来实现自定义的报错返回
+    :param ident:
+    :return:
+    """
+
+    rv = self.get(ident)
+    if rv is None:
+        raise NotFound()
+    return rv
+```
+
+
+
+#### 7-1 追求更好的写法
+
+返回业务数据信息，在一个模型中，不能直接返回模型。需要转为字典模式，然后再json格式化返回出去
+
+- 提高变成思维
+- 抽象思维的能力
+- 防止厌倦写代码
+- 不只是追求功能的实现
+
+#### 7-2 理解序列化时的default函数
+
+jsonify在返回序列化数据时，如果flask知道怎么序列化就不会调用default函数
+
+如果不知道怎么序列化时，就会调用default的函数，根据条件判断其中不同格式数据的
+
+序列化方法
+
+#### 7-3 不完美的对象转字典
+
+对象的.\__dict__中
+
+数据不会存放**类变量**，
+
+但是会存放**实例变量**
+
+```
+class Name:
+
+	name = '1'
+
+	age = 2
+
+def __init__(self):
+
+		self.gender = 1
+
+则Name对象实例化后
+name=Name()
+name.__dict__的值只是{"gender":1}
+```
+
+#### 7-4 深入理解dict的机制
+
+当有\__getitem__方法时，实例化后的对象则可以像访问字典一样，访问对应的属性
+
+```python
+class Name(object):
+
+    scope = 1
+    age = 18
+
+    def __init__(self):
+        self.gender = 'male'
+
+    def __getitem__(self, item):
+        return getattr(self, item)
+
+x = Name()
+print(x['gender']) # male
+```
+
+当dict传入的值时对象的话，会读取类中的方法**keys**的类
+
+```Python
+class Name(object):
+
+    scope = 1
+    age = 18
+
+    def __init__(self):
+        self.gender = 'male'
+
+    def keys(self):
+        return ('age', 'gender')
+    
+    def __getitem__(self, item):
+        return getattr(self, item)
+
+print(dict(x))
+```
+
+#### 7-5 一个元素的元组要特别注意
+
+keys方法如果想只返回一个元素的话，需要注意一个元素的元组需要加逗号
+
+如：('age',);否则会报错，它会从第一个字母去解析
+
+更简单的办法时返回的时候用**列表['gender']**，则不用加逗号，或者**集合set{'gender'}**
+
+```
+class Name(object):
+
+    scope = 1
+    age = 18
+
+    def __init__(self):
+        self.gender = 'male'
+
+    def keys(self):
+        return ('age',)
+        # return ['age'] # 列表
+				# return {'age'} # 集合
+    
+    def __getitem__(self, item):
+        return getattr(self, item)
+
+print(dict(x))
+```
+
+#### 7-6 序列化SQLAlchemy模型
+
+在模型定义中添加**keys和\__getitem__**方法,控制模型的序列化
+
+```python
+class User(Base):
+    id = Column(Integer, primary_key=True)
+    email = Column(String(24), unique=True, nullable=False)
+    nickname = Column(String(24), unique=True)
+    # 权限标识:1、普通用户，2、管理员
+    auth = Column(SmallInteger, default=1)
+    #
+    _password = Column('password', String(100))
+
+    # 定义keys，__getattr__ 进行模型序列化时的属性控制
+    def keys(self):
+        return ['id', 'email', 'nickname', 'auth']
+
+    def __getitem__(self, item):
+        return getattr(self, item)
+```
+
+#### 7-7 完善序列化
+
+> 2019-06-04 16:29:14
+
+每个模型序列化都需要有keys和\__getitem__。为了简化代码，可以把\__getitem__放到基类中
+
+如果模型中有时间格式的数据，则需要在default的下面加入判断条件
+
+```python
+        #处理时间类型的数据
+        if isinstance(o, date):
+            return o.strftime('%Y-%m-%d')
+```
+
+#### 7-8 ViewModel对于API有意义吗?
+
+**ViewModel**是为视图层提供个性化的视图模型
+
+- 可以个性化模型的返回值
+- 可以处理一批的模型
+- 可以合并不同的模型
+- 但对于RESTful的规范，有没有ViewModel其实不太重要
+
+#### 8-1 删除模型注意事项
+
+> 2019-06-11 16:30:30
+
+删除的时候调用的是DELETE。
+
+实现方式是软删除，通过改变status的状态来实现
+
+```python
+# 删除用户的操作
+@api.route('/<int:uid>', methods=['DELETE'])
+@auth.login_required
+def delete_user(uid):
+    with db.auto_commit():
+        # 直接调用get_or_404会能反复查询到想要的数据
+        # user = User.query.get_or_404(uid)
+        # filter_by方法会添加status=1的条件
+        user = User.query.filter_by(id=uid).first_or_404()
+        user.delete()
+    return DeleteSuccess()
+    
+# 在user模型中定义的方法
+def delete(self):
+        # 软删除
+        self.status = 0
+```
+
+#### 8-2 g变量中读取uid防止超权
+
+通过flask的g变量来获取用户的uid
+
+```python
+# 删除用户的操作
+@api.route('/', methods=['DELETE'])
+@auth.login_required
+# 防止超权
+# @api.route('/<int:uid>', methods=['DELETE'])
+# def delete_user(uid):
+def delete_user():
+    # 通过g变量来获取,g变量是线程隔离的
+    uid = g.user.uid
+    with db.auto_commit():
+        # 直接调用get_or_404会能反复查询到想要的数据
+        # user = User.query.get_or_404(uid)
+        # filter_by方法会添加status=1的条件
+        user = User.query.filter_by(id=uid).first_or_404()
+        user.delete()
+    return DeleteSuccess()
+```
+
+#### 8-3 生成超级管理员账号
+
+```python3
+from app.models.base import db
+from app.models.user import User
+from app import create_app
+
+app = create_app()
+
+# 推入上下文
+with app.app_context():
+    with db.auto_commit():
+        user = User()
+        user.nickname = 'Super'
+        user.auth = 2
+        user.email = '999@qq.com'
+        user.password = '123456'
+        db.session.add(user)
+
+```
+
