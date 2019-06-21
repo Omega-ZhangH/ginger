@@ -43,6 +43,7 @@ def get_token():
     # 生成Token
     token = generate_auth_token(identity['uid'],
                                 form.type.data,
+                                identity['scope'],
                                 expiration=current_app.config['TOKEN_EXPIRATION'])
     # 将Token字节码转换为ascii码
     t = {
@@ -66,5 +67,6 @@ def generate_auth_token(uid, ac_type, scope=None, expiration=7200):
                    expires_in=expiration)
     return s.dumps({
         'uid': uid,
-        'type': ac_type.value
+        'type': ac_type.value,
+        'scope': scope
     })

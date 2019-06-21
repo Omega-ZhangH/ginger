@@ -17,7 +17,7 @@ from flask import jsonify, g
 # user = Blueprint('user', __name__)
 
 # 实例化自定义的红图
-from app.libs.error_code import DeleteSuccess
+from app.libs.error_code import DeleteSuccess, AuthFailed
 from app.libs.redprint import Redprint
 from app.libs.token_auth import auth
 from app.models.base import db
@@ -26,7 +26,7 @@ from app.models.user import User
 api = Redprint('user')
 
 
-@api.route('/<int:uid>', methods=['GET'])
+@api.route('/1/<int:uid>', methods=['GET'])
 @auth.login_required
 def get_user(uid):
     user = User.query.get_or_404(uid)
@@ -34,6 +34,18 @@ def get_user(uid):
     return jsonify(user)
     # return jsonify(Name())
     # return 'i'
+
+
+@api.route('/<int:uid>', methods=['GET'])
+@auth.login_required
+def super_get_user(uid):
+    user = User.query.get_or_404(uid)
+
+    return jsonify(user)
+    # return jsonify(Name())
+    # return 'i'
+
+
 
 
 # 删除用户的操作

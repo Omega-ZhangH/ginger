@@ -898,3 +898,184 @@ with app.app_context():
 
 ```
 
+#### 8-4 不太好的权限管理方案
+
+> 2019-06-12 10:54:47
+
+方案：
+
+- 通过在生成token的时候加入身份标识is_admin 也就是scope
+- 然后在解析token时解析出is_admin，从而判断是否是管理员
+
+不太好的原因：
+
+- 每个视图函数中都要写判断是否是超级管理员
+- 如果一个项目中不只有普通用户和管理员的话，权限判断就会复杂
+- 不够灵活和普适性更加复杂的权限管理
+
+#### 8-5 比较好的权限管理方案
+
+实现方式：
+
+- 通过身份标识，编写对应的权限，在数据库表中
+- 编写对应权限在redis中
+- 编写对应权限在可配置文件中
+
+
+
+#### 8-6 实现Scope权限管理 一
+
+> 2019-06-18 11:34:59
+
+通过在生产Token中写入scope的值是AdminScope 和UserScope
+
+新建/ginger/app/libs/scope.py.编写定义权限作用域和判断
+
+```python
+
+# 定义管理员可访问的视图列表
+class AdminScope:
+    allow_api = ['super_get_user']
+
+
+# 定义普通用户可访问的视图列表
+class UserScope:
+    allow_api = []
+
+
+def is_in_scope(scope, endpoint):
+    '''
+    :param scope (str):传入解析toKen中的scope的值
+    :param endpoint: 视图函数的目录
+    '''
+    if endpoint in scope.allow_api:
+        return True
+    else:
+        return False
+```
+
+如果用户权限不够，则在认证用户Token的时候抛出异常
+
+```python
+    # 如果用户的权限不够则吗，返回认证失败
+    allow = is_in_scope(scope, request.endpoint)
+    if not allow:
+        raise Forbidden()
+```
+
+
+
+#### 8-7 globals()实现“反射”
+
+通过一个**类的名字**而得到一个**类的对象**：
+
+- globals()方法会把当前文件中所有的变量和类变成一个字典
+
+- 然后通过关键字，调用这个字典既可以得到一个
+
+```python
+def is_in_scope(scope, endpoint):
+    '''
+    :param scope (str):传入解析toKen中的scope的值
+    :param endpoint: 视图函数的目录
+    '''
+    # 通过一个类的名字而得到一个类的对象：
+    gl = globals()
+    scope = globals()[scope]()
+
+    if endpoint in scope.allow_api:
+        return True
+    else:
+        return False
+```
+
+#### 8-8 实现Scope权限管理 二
+
+因为我们的视图函数是建立在蓝图上的，所以endpoint是v1.get_super_user
+
+```python
+
+# 定义管理员可访问的视图列表
+class AdminScope:
+    allow_api = ['v1.super_get_user', 'v1.get_user']
+    
+```
+
+#### 8-9 Scope优化一 支持权限相加
+
+```python
+# 定义管理员可访问的视图列表
+class AdminScope:
+    allow_api = ['v1.super_get_user', 'v1.get_user']
+    # 权限相加
+    def __init__(self):
+        self.add(UserScope())
+
+    def add(self, other):
+        self.allow_api = self.allow_api + other.allow_api
+```
+
+#### 8-10 Scope优化 二 支持权限链式相加
+
+通过在add函数中把自身返回回去，实现链式加权
+
+```python
+class AdminScope:
+    allow_api = ['v1.super_get_user', 'v1.get_user']
+    # 权限相加
+    def __init__(self):
+        self.add(UserScope()).add(SuperScope())
+
+    def add(self, other):
+        self.allow_api = self.allow_api + other.allow_api
+				return self
+```
+
+#### 8-11 Scope优化 三 所有子类支持相加
+
+通过继承一个基类，使得新定义的类能够支持权限相加
+
+```python
+# 定义一个基类，让权限相加的操作都能支持
+class Scope:
+    def add(self, other):
+        self.allow_api = self.allow_api + other.allow_api
+        return self
+```
+
+#### 8-12 Scope优化 四 运算符重载
+
+实现对象的相加操作，需要用到运算符重载
+
+```python
+# 定义一个基类，让权限相加的操作都能支持
+class Scope:
+    # def add(self, other):
+    def __add__(self, other):
+        # 运算符重载，支持对象的相加
+        self.allow_api = self.allow_api + other.allow_api
+        return self
+```
+
+#### 8-13 Scope 优化 探讨模块级别的Scope
+
+思路：通过指定视图函数所在的文件，读取其中的全量视图
+
+将endpoint从v1+viewfunc 修改为 v1.redname + viewfunc
+
+#### 8-14 Scope优化 实现模块级别的Scope
+
+通过修改红图中的endpoint的格式来实现
+
+```python
+        for f, rule, options in self.mound:
+            # options是字典，pop是删除如果有endpoint的key，返回对应的值，否则返回默认值
+            # endpoint = options.pop("endpoint", f.__name__)
+            # 修改endpoint的格式，变成：红图名字+视图名字
+            endpoint = self.name + '+' + options.pop("endpoint", f.__name__)
+            blueprint.add_url_rule(url_prefix + rule, endpoint, f, **options)
+
+```
+
+#### 8-15 Scope优化 七 支持排除
+

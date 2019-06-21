@@ -44,5 +44,7 @@ class Redprint:
 
         for f, rule, options in self.mound:
             # options是字典，pop是删除如果有endpoint的key，返回对应的值，否则返回默认值
-            endpoint = options.pop("endpoint", f.__name__)
+            # endpoint = options.pop("endpoint", f.__name__)
+            # 修改endpoint的格式，变成：红图名字+视图名字
+            endpoint = self.name + '+' + options.pop("endpoint", f.__name__)
             blueprint.add_url_rule(url_prefix + rule, endpoint, f, **options)

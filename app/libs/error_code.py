@@ -77,4 +77,10 @@ class AuthFailed(APIException):
     msg = 'authorization failed'
     error_code = 1005
 
- 
+
+class Forbidden(APIException):
+    # 自定义一个禁止访问，权限不够的异常类
+    code = 403
+    msg = 'forbidden, not in scope'
+    error_code = 1004
+

@@ -12,11 +12,12 @@ Template:
 """
 from collections import namedtuple
 
-from flask import current_app, g
+from flask import current_app, g, request
 from flask_httpauth import HTTPBasicAuth
 from itsdangerous import TimedJSONWebSignatureSerializer as Serializer, BadSignature, SignatureExpired
 
-from app.libs.error_code import AuthFailed
+from app.libs.error_code import AuthFailed, Forbidden
+from app.libs.scope import is_in_scope
 
 auth = HTTPBasicAuth()
 User = namedtuple('User', ['uid', 'ac_type', 'scope'])
@@ -47,5 +48,10 @@ def verify_auth_token(token):
                          error_code=1003)
     uid = data['uid']
     ac_type = data['type']
+    scope = data['scope']
+    # 如果用户的权限不够则吗，返回认证失败
+    allow = is_in_scope(scope, request.endpoint)
+    if not allow:
+        raise Forbidden()
     # 返回结果以对象式的形式返回
-    return User(uid, ac_type, '')
+    return User(uid, ac_type, scope)

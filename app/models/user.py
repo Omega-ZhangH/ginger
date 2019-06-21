@@ -67,7 +67,9 @@ class User(Base):
         if not user.check_password(password):
             # 如果密码没有找到，在返回一个异常
             raise AuthFailed()
-        return {'uid': user.id}
+        # 判断是否是管理员
+        scope = 'AdminScope' if user.auth == 2 else 'UserScope'
+        return {'uid': user.id, 'scope': scope}
 
     def check_password(self, raw):
         # 定义一个校验用户密码的方法
